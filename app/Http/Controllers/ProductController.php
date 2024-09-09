@@ -2,68 +2,49 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
+use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Services\ProductQuery;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::query();
+        $filter = new ProductQuery();
+        $queryItems = $filter->transform($request);
 
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
+        if (count($queryItems) == 0) {
+            $products = Product::all();
+            return ProductResource::collection($products);
+        } else {
+            return ProductResource::collection(Product::where($queryItems)->get());
         }
-
-        if ($request->has('min_price') && $request->has('max_price')) {
-            $query->whereBetween('price', [$request->min_price, $request->max_price]);
-        }
-
-        if ($request->has('sort')) {
-            $query->orderBy('price', $request->sort);
-        }
-
-        return response()->json($query->get());
     }
-
-    public function show($id)
+    public function store(StoreProductRequest $request)
     {
-        $product = Product::findOrFail($id);
-        return response()->json($product);
+        $product = Product::create($request->validated());
+        return ProductResource::make($product);
     }
 
-    public function store(Request $request)
+    public function show(Product $product)
     {
-        $validatedData = $request->validate([
-            'farmer_id' => 'required|exists:farmers,id',
-            'category_id' => 'required|exists:categories,id',
-            'title' => 'required|string|max:255',
-            'price' => 'required|numeric',
-            'type' => 'required|string',
-            'description' => 'required|string',
-            'stock_quantity' => 'required|integer',
-            'image_url' => 'url',
-        ]);
-
-        $product = Product::create($validatedData);
-        return response()->json($product, 201);
+        return ProductResource::make($product);
     }
 
-    public function updete(Request $request,$id) {
-        $product = Product::findOrFail($id);
-        $validatedData = $request->validate([
-            'price' => 'numeric',
-            'stock_quantity' => 'integer',
-        ]);
 
-        $product->update($validatedData);
+    public function update(UpdateProductRequest $request, Product $product)
+    {
+        $product->update($request->validated());
 
-        return response()->json($product);
+        return ProductResource::make($product);
     }
 
-    public function destroy($id) {
-        $product = Product::findOrFail($id);
+    public function destroy(Product $product)
+    {
         $product->delete();
-        return response()->json(null, 204);
+        return response()->noContent();
     }
 }

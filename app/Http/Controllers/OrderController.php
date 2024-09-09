@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreOrderRequest;
+use App\Http\Requests\UpdateOrderRequest;
+use App\Http\Resources\OrderResource;
 use App\Models\Order;
-use App\Models\Product;
+use App\Services\OrderQuery;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
@@ -13,88 +16,52 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Order::query();
+        $filter = new OrderQuery();
+        $queryItems = $filter->transform($request);
 
-        if ($request->has('user_id')) {
-            $query->where('user_id', $request->user_id);
+        if (count($queryItems) == 0) {
+            $Orders = Order::all();
+            return OrderResource::collection($Orders);
+        } else {
+            return OrderResource::collection(Order::where($queryItems)->get());
         }
-        $query = Order::query();
-
-        if ($request->has('product_id')) {
-            $query->where('product_id', $request->product_id);
-        }
-
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        return response()->json($query->get());
     }
 
-    public function show($id)
+    public function store(StoreOrderRequest $request)
     {
-        $order = Order::findOrFail($id);
-
-        return response()->json($order);
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        $validatedData = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1',
-        ]);
-
         // Check For Enough Stock
-        $product = Product::findOrFail($request->product_id);
-
-        if ($product->stock_quantiti < $request->quantity) {
-            return response()->json(['error' => 'Not enough stock available'], 400);
-        }
+        $Order = Order::findOrFail($request->Order_id);
 
         // Reduce Stock Quantity
-        $product->stock_quantity -= $request->quantity;
-        $product->save();
+        $Order->stock_quantity -= $request->quantity;
+        $Order->save();
 
         // Create The Order
+        $order = Order::create($request->validated());
 
-        $order = Order::create([
-            'user_id' => $request->user_id,
-            'product_id' => $request->product_id,
-            'quantity' => $request->quantity,
-            'status' => 'pending',
-        ]);
+        return OrderResource::make($order);
+    }
+    public function show(Order $order)
+    {
+        return OrderResource::make($order);
+    }
 
-        return response()->json($order, 201);
+    public function update(UpdateOrderRequest $request, Order $order)
+    {
+        $Order = Order::findOrFail($request->Order_id);
+
+        // Reduce Stock Quantity
+        $Order->stock_quantity -= $request->quantity;
+        $Order->save();
+
+        $order->update($request->validated());
+        return OrderResource::make($order);
     }
 
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function destroy(Order $order)
     {
-        $order = Order::findOrFail($id);
-
-        $validatedData = $request->validate([
-            'status' => 'required|string',
-        ]);
-
-        $order->update($validatedData);
-        return response()->json($order);
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        $order = Order::findOrFail($id);
         $order->delete();
-        return response()->json(null, 204);
+        return response()->noContent();
     }
 }

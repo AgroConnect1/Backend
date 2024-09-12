@@ -9,48 +9,11 @@ This project is a Laravel-based API for managing Orders and Products. It provide
 4. API Endpoints
 5. Usage
 
-## Requirements
+## Technologies
 
-To run this project, ensure you have the following installed:
 - PHP (compatible with Laravel version)
 - Composer (for dependency management)
 - MySQL or any supported relational database
-- Node.js & npm (optional, if you need to manage frontend assets)
-
-## Installation
-
-Follow these steps to get started with the project:
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/AgroConnect1/Backend.git
-   cd yourrepository
-Install PHP dependencies:
-
-bash
-
-composer install
-Set up environment variables: Copy the .env.example file to .env and configure your environment variables, including database settings.
-
-bash
-
-cp .env.example .env
-Generate the application key:
-
-bash
-
-php artisan key:generate
-Run database migrations:
-
-bash
-
-php artisan migrate
-Start the Laravel development server:
-
-bash
-
-php artisan serve
-You should now have the API up and running locally.
 
 Database Structure
 The database contains the following key entities:
